@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../contexts/AuthContext';
+import { queryAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
 const Profile = () => {
@@ -36,6 +37,11 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [userStats, setUserStats] = useState({
+    totalConversations: 0,
+    messagesSent: 0,
+    hoursOfInteraction: 0,
+  });
 
   const {
     register,
@@ -92,13 +98,40 @@ const Profile = () => {
   };
 
   const getJoinDate = () => {
-    // This would come from user data in a real app
-    return new Date().toLocaleDateString('en-US', {
+    // Use user creation date or fallback to current date
+    const date = user?.created_at ? new Date(user.created_at) : new Date();
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
   };
+
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        const data = await queryAPI.getQueries(0, 100);
+        const queries = data.queries || [];
+        
+        setUserStats({
+          totalConversations: queries.length,
+          messagesSent: queries.length,
+          hoursOfInteraction: Math.round((queries.length * 2) / 60 * 100) / 100, // Rough estimate
+        });
+      } catch (error) {
+        console.error('Failed to fetch user stats:', error);
+      }
+    };
+
+    if (user) {
+      fetchUserStats();
+      
+      // Auto-refresh every 10 seconds when on profile page
+      const intervalId = setInterval(fetchUserStats, 10000);
+      
+      return () => clearInterval(intervalId);
+    }
+  }, [user]);
 
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
@@ -278,7 +311,7 @@ const Profile = () => {
                 <Grid item xs={12} sm={4}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h4" color="primary">
-                      0
+                      {userStats.totalConversations}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
                       Total Conversations
@@ -288,7 +321,7 @@ const Profile = () => {
                 <Grid item xs={12} sm={4}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h4" color="primary">
-                      0
+                      {userStats.messagesSent}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
                       Messages Sent
@@ -298,7 +331,7 @@ const Profile = () => {
                 <Grid item xs={12} sm={4}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h4" color="primary">
-                      0
+                      {userStats.hoursOfInteraction}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
                       Hours of Interaction

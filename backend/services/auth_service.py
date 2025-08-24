@@ -18,7 +18,10 @@ class AuthService:
     def __init__(self):
         self.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
         self.algorithm = os.getenv("ALGORITHM", "HS256")
-        self.access_token_expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+        # Convert hours to minutes for backward compatibility
+        expire_hours = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "24"))
+        expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(expire_hours * 60)))
+        self.access_token_expire_minutes = expire_minutes
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:

@@ -109,7 +109,7 @@ const Register = () => {
                 margin="normal"
                 fullWidth
                 id="email"
-                label="Email Address (Optional)"
+                label="Email Address"
                 name="email"
                 autoComplete="email"
                 {...register('email', {

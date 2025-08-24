@@ -15,8 +15,10 @@ class WebSearchService:
     def __init__(self):
         self.session = None
         self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        self.max_results = int(os.getenv("SEARCH_MAX_RESULTS", "5"))
+        self.timeout = int(os.getenv("SEARCH_TIMEOUT", "10"))
         
-    async def search_duckduckgo(self, query: str, num_results: int = 5) -> List[Dict]:
+    async def search_duckduckgo(self, query: str, num_results: int = None) -> List[Dict]:
         """Search using DuckDuckGo (no API key required)"""
         try:
             headers = {
@@ -28,8 +30,11 @@ class WebSearchService:
                 'Referer': 'https://duckduckgo.com/',
             }
             
+            if num_results is None:
+                num_results = self.max_results
+            
             # First get the token
-            async with httpx.AsyncClient(headers=headers, timeout=10.0) as client:
+            async with httpx.AsyncClient(headers=headers, timeout=float(self.timeout)) as client:
                 # DuckDuckGo search
                 search_url = "https://html.duckduckgo.com/html/"
                 params = {

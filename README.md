@@ -81,82 +81,135 @@ ai_agent/
 - Node.js 18+ (for local development)
 - Python 3.9+ (for local development)
 
-## Quick Start with Docker
+## 🚀 Quick Start with Makefile
 
-1. **Clone and navigate to project:**
-   ```bash
-   cd ai_agent
-   ```
+### Option 1: One-Command Setup (Recommended)
+```bash
+# Install everything automatically (Node.js, Python, dependencies)
+make install
 
-2. **Start all services:**
-   ```bash
-   docker-compose up -d
-   ```
+# Start development servers
+make dev
+```
 
-3. **Download AI model (first run only):**
-   ```bash
-   docker exec ai_agent_ollama ollama pull llama3.2:1b
-   ```
+### Option 2: Docker Production Environment  
+```bash
+# Build and start all services
+make start
 
-4. **Access the application:**
-   - 🌐 Web Interface: http://localhost
-   - 📊 Dashboard: http://localhost/dashboard  
-   - 💬 Chat: http://localhost/chat
-   - 📚 API Documentation: http://localhost/docs
+# Download AI model (first run only)
+make model
+```
 
-## Local Development Setup
+### Access the application:
+- 🌐 **Frontend**: http://localhost:3000 (dev) or http://localhost (prod)
+- 🔗 **Backend API**: http://localhost:8000  
+- 📚 **API Documentation**: http://localhost:8000/docs
 
-### Backend Setup
+## 📋 Available Makefile Commands
 
-1. **Create virtual environment:**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\\Scripts\\activate
-   ```
+### 🎯 Essential Commands
+```bash
+make help          # Show all available commands
+make install       # Install all dependencies and setup environment
+make dev           # Start development servers (auto-installs dependencies)
+make start         # Start production environment with Docker
+make stop          # Stop all Docker services
+make restart       # Restart all Docker services
+```
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 🔧 Development Commands  
+```bash
+make dev           # Start local development servers
+make test          # Run all tests
+make logs          # Show Docker container logs
+make clean         # Clean up Docker containers and volumes
+```
 
-3. **Set environment variables:**
-   ```bash
-   export DATABASE_URL="sqlite:///./app.db"  # For testing
-   export SECRET_KEY="your-secret-key-here"
-   export OLLAMA_BASE_URL="http://localhost:11434"
-   ```
+### 🤖 AI Model Management
+```bash
+make model         # Download required AI model (llama3.2:1b)
+make model-list    # List all available models
+```
 
-4. **Start Ollama (required for LLM functionality):**
-   ```bash
-   # Install Ollama from https://ollama.ai
-   ollama serve
-   ollama pull llama2  # Or any preferred model
-   ```
+### 📊 System Management
+```bash
+make status        # Show service status
+make health        # Check service health
+make install-nodejs # Install Node.js manually (if needed)
+```
 
-5. **Run backend:**
-   ```bash
-   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-   ```
+## 🛠️ Development vs Production
 
-### Frontend Setup
+### Development Mode (`make dev`)
+- ✅ **Local servers** - Frontend on :3000, Backend on :8000
+- ✅ **Hot reload** - Auto-restart on code changes  
+- ✅ **Direct debugging** - Full access to logs and debugging
+- ✅ **Fast iteration** - Quick testing and development
+- ⚠️ **Requires**: Ollama running locally (`ollama serve`)
 
-1. **Install dependencies:**
-   ```bash
-   cd frontend
-   npm install
-   ```
+### Production Mode (`make start`) 
+- ✅ **Docker containers** - Isolated, scalable services
+- ✅ **Nginx proxy** - Professional reverse proxy setup
+- ✅ **Database** - PostgreSQL with persistent storage  
+- ✅ **All-in-one** - Complete production environment
+- 🌐 **Web Interface**: http://localhost
 
-2. **Set environment variables:**
-   ```bash
-   # Create .env file
-   echo "REACT_APP_API_URL=http://localhost:8000" > .env
-   ```
+## 📝 Manual Setup (Advanced Users)
 
-3. **Start development server:**
-   ```bash
-   npm start
-   ```
+If you prefer manual setup instead of using Makefile:
+
+### Prerequisites Installation
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y curl git build-essential python3 python3-pip python3-venv
+
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install Ollama
+curl https://ollama.ai/install.sh | sh
+```
+
+### Manual Backend Setup
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
+
+# Copy and edit environment file
+cp .env.template .env
+# Edit .env with your configuration
+
+# Start backend
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Manual Frontend Setup  
+```bash
+cd frontend
+npm install
+
+# Copy and edit environment file
+cp .env.template .env
+# Edit .env with your configuration
+
+# Start frontend
+npm start
+```
+
+### Manual Ollama Setup
+```bash
+# Start Ollama service
+ollama serve
+
+# Download AI model
+ollama pull llama3.2:1b
+```
 
 ## Environment Variables
 

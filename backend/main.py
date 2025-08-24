@@ -32,16 +32,10 @@ app = FastAPI(
 )
 
 # Configure CORS
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost,http://127.0.0.1").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000",
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost",
-        "http://127.0.0.1"
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -268,7 +262,7 @@ async def upload_file(
     """Upload a file for processing"""
     try:
         # Create uploads directory if it doesn't exist
-        upload_dir = "/app/uploads"
+        upload_dir = os.getenv("UPLOAD_DIR", "/app/uploads")
         os.makedirs(upload_dir, exist_ok=True)
         
         # Save the uploaded file
@@ -399,4 +393,7 @@ async def analyze_file(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    host = os.getenv("API_HOST", "0.0.0.0")
+    port = int(os.getenv("API_PORT", "8000"))
+    debug = os.getenv("DEBUG", "false").lower() == "true"
+    uvicorn.run(app, host=host, port=port, reload=debug)

@@ -58,6 +58,12 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
+    
+    // Auto-refresh every 30 seconds
+    const intervalId = setInterval(fetchDashboardData, 30000);
+    
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const getSystemStatusColor = (status) => {
