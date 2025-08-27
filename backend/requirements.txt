@@ -18,3 +18,8 @@ python-dateutil==2.8.2
 beautifulsoup4==4.12.2
 requests==2.31.0
 aiohttp==3.9.1
+# transformers>=4.35.0
+# torch>=2.1.0
+# datasets>=2.14.0
+# accelerate>=0.24.0
+# peft>=0.7.0

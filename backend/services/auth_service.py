@@ -54,7 +54,7 @@ class AuthService:
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not validate credentials"
                 )
-            return {"username": username}
+            return payload  # Return full payload including 'sub'
         except JWTError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -138,13 +138,27 @@ class AuthService:
     
     def get_current_user(self, token: str, db: Session) -> User:
         """Get current user from JWT token"""
-        token_data = self.verify_token(token)
-        user = self.get_user_by_username(db, token_data["username"])
-        
-        if user is None:
+        try:
+            token_data = self.verify_token(token)
+            username = token_data.get("sub")  # JWT standard uses 'sub' for subject
+            
+            if not username:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token: no username found"
+                )
+                
+            user = self.get_user_by_username(db, username)
+            
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"User not found: {username}"
+                )
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found"
+                detail=f"Token validation failed: {str(e)}"
             )
         
         if not user.is_active:

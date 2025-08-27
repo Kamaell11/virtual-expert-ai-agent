@@ -17,6 +17,7 @@ import {
   Chat,
   History,
   ExitToApp,
+  SmartToy,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -89,6 +90,16 @@ const Navbar = () => {
             }}
           >
             History
+          </Button>
+          <Button
+            color="inherit"
+            startIcon={<SmartToy />}
+            onClick={() => handleNavigation('/models')}
+            sx={{
+              backgroundColor: isActive('/models') ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+            }}
+          >
+            Models
           </Button>
 
           <IconButton

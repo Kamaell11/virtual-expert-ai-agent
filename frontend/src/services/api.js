@@ -103,4 +103,117 @@ export const systemAPI = {
   },
 };
 
+// Fine-Tuning API
+export const fineTuningAPI = {
+  // Models management
+  getFineTunedModels: async (specialization = null) => {
+    const params = specialization ? `?specialization=${specialization}` : '';
+    const response = await apiClient.get(`/fine-tuned-models${params}`);
+    return response.data;
+  },
+
+  createFineTunedModel: async (modelData) => {
+    const response = await apiClient.post('/fine-tuned-models', modelData);
+    return response.data;
+  },
+
+  getFineTunedModel: async (modelId) => {
+    const response = await apiClient.get(`/fine-tuned-models/${modelId}`);
+    return response.data;
+  },
+
+  updateFineTunedModel: async (modelId, updateData) => {
+    const response = await apiClient.put(`/fine-tuned-models/${modelId}`, updateData);
+    return response.data;
+  },
+
+  deleteFineTunedModel: async (modelId) => {
+    const response = await apiClient.delete(`/fine-tuned-models/${modelId}`);
+    return response.data;
+  },
+
+  // Dataset management
+  uploadDataset: async (modelId, file, datasetType = 'jsonl', description = '') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('dataset_type', datasetType);
+    formData.append('description', description);
+
+    const response = await apiClient.post(`/fine-tuned-models/${modelId}/datasets`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  getModelDatasets: async (modelId) => {
+    const response = await apiClient.get(`/fine-tuned-models/${modelId}/datasets`);
+    return response.data;
+  },
+
+  validateDataset: async (datasetId) => {
+    const response = await apiClient.post(`/datasets/${datasetId}/validate`);
+    return response.data;
+  },
+
+  // Training management
+  startTraining: async (modelId, trainingParams = {}) => {
+    const response = await apiClient.post(`/fine-tuned-models/${modelId}/start-training`, trainingParams);
+    return response.data;
+  },
+
+  stopTraining: async (modelId) => {
+    const response = await apiClient.post(`/fine-tuned-models/${modelId}/stop-training`);
+    return response.data;
+  },
+
+  getTrainingStatus: async (modelId) => {
+    const response = await apiClient.get(`/fine-tuned-models/${modelId}/status`);
+    return response.data;
+  },
+
+  getTrainingLogs: async (modelId, limit = 50, logLevel = null) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit);
+    if (logLevel) params.append('log_level', logLevel);
+    
+    const response = await apiClient.get(`/fine-tuned-models/${modelId}/logs?${params}`);
+    return response.data;
+  },
+
+  // Base models
+  getBaseModels: async () => {
+    const response = await apiClient.get('/base-models');
+    return response.data;
+  },
+
+  // Admin endpoints
+  getFineTuningOverview: async () => {
+    const response = await apiClient.get('/admin/fine-tuning/overview');
+    return response.data;
+  },
+
+  getActiveTrainings: async () => {
+    const response = await apiClient.get('/admin/fine-tuning/active-trainings');
+    return response.data;
+  },
+
+  getSystemStats: async () => {
+    const response = await apiClient.get('/admin/fine-tuning/system-stats');
+    return response.data;
+  },
+};
+
+// Enhanced Query API with fine-tuned model support
+export const enhancedQueryAPI = {
+  ...queryAPI,
+  
+  createQueryWithModel: async (queryData, fineTunedModelId = null) => {
+    const params = fineTunedModelId ? `?fine_tuned_model_id=${fineTunedModelId}` : '';
+    const response = await apiClient.post(`/query${params}`, queryData);
+    return response.data;
+  },
+};
+
 export default apiClient;

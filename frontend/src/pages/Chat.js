@@ -11,9 +11,13 @@ import {
   CircularProgress,
   Alert,
   Chip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import { Send, SmartToy, Person, AttachFile, GetApp, Upload } from '@mui/icons-material';
-import { queryAPI } from '../services/api';
+import { queryAPI, fineTuningAPI, enhancedQueryAPI, modelAPI } from '../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -23,6 +27,8 @@ const Chat = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [availableModels, setAvailableModels] = useState([]);
+  const [selectedModel, setSelectedModel] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -33,6 +39,53 @@ const Chat = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        // Fetch both Ollama base models and fine-tuned models
+        const [ollamaModels, fineTunedModels] = await Promise.all([
+          modelAPI.getAvailableModels().catch(() => ({ models: [] })),
+          fineTuningAPI.getFineTunedModels().catch(() => [])
+        ]);
+        
+        // Create model options
+        const baseModels = ollamaModels.models?.map(model => ({
+          id: `ollama_${model.name}`,
+          name: `${model.name} (Ollama)`,
+          specialization: 'Base Model',
+          type: 'ollama',
+          model_name: model.name
+        })) || [];
+        
+        const customModels = fineTunedModels
+          .filter(model => model.training_status === 'completed' || model.training_status === 'pending')
+          .map(model => ({
+            id: `finetuned_${model.id}`,
+            name: `${model.name}${model.training_status === 'pending' ? ' (Simulated)' : ''}`,
+            specialization: model.specialization || 'Custom',
+            type: 'finetuned',
+            model_id: model.id
+          }));
+        
+        // Set default model (first Ollama model or create default)
+        const defaultModel = baseModels.length > 0 
+          ? baseModels[0] 
+          : { id: 'base', name: 'Base Model (llama3.2:1b)', specialization: 'General', type: 'ollama', model_name: 'llama3.2:1b' };
+        
+        setAvailableModels([...baseModels, ...customModels]);
+        setSelectedModel(defaultModel);
+      } catch (error) {
+        console.error('Failed to fetch models:', error);
+        // Set fallback model
+        const fallbackModel = { id: 'base', name: 'Base Model (llama3.2:1b)', specialization: 'General', type: 'ollama', model_name: 'llama3.2:1b' };
+        setAvailableModels([fallbackModel]);
+        setSelectedModel(fallbackModel);
+      }
+    };
+
+    fetchModels();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,16 +104,36 @@ const Chat = () => {
     setError('');
 
     try {
-      const response = await queryAPI.createQuery({
-        query_text: userMessage.text,
-        context: null,
-      });
+      let response;
+      
+      // First switch to the selected model if it's an Ollama model
+      if (selectedModel && selectedModel.type === 'ollama') {
+        try {
+          await modelAPI.switchModel(selectedModel.model_name);
+        } catch (switchError) {
+          console.warn('Failed to switch model, continuing with current:', switchError);
+        }
+      }
+      
+      // Send query with or without fine-tuned model
+      if (selectedModel && selectedModel.type === 'finetuned') {
+        response = await enhancedQueryAPI.createQueryWithModel({
+          query_text: userMessage.text,
+          context: null,
+        }, selectedModel.model_id);
+      } else {
+        response = await queryAPI.createQuery({
+          query_text: userMessage.text,
+          context: null,
+        });
+      }
 
       const botMessage = {
         id: Date.now() + 1,
         text: response.response_text,
         isUser: false,
         timestamp: new Date(response.timestamp),
+        model_used: response.model_used,
       };
 
       setMessages((prev) => [...prev, botMessage]);
@@ -97,6 +170,7 @@ const Chat = () => {
               text: `📥 File "${response.file_action.filename}" has been downloaded successfully!`,
               isUser: false,
               timestamp: new Date(),
+              model_used: response.model_used,
             };
 
             setMessages((prev) => [...prev, fileMessage]);
@@ -169,6 +243,7 @@ const Chat = () => {
           text: `I've analyzed your file "${result.filename}":\n\n${JSON.stringify(result.analysis, null, 2)}`,
           isUser: false,
           timestamp: new Date(),
+          model_used: 'File Analyzer',
         };
 
         setMessages(prev => [...prev, userMessage, aiMessage]);
@@ -218,12 +293,41 @@ const Chat = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        AI Chat Assistant
-      </Typography>
-      <Typography variant="body1" color="textSecondary" gutterBottom>
-        Ask me anything! I'm here to help you with information, analysis, and problem-solving.
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            AI Chat Assistant
+          </Typography>
+          <Typography variant="body1" color="textSecondary">
+            Ask me anything! I'm here to help you with information, analysis, and problem-solving.
+          </Typography>
+        </Box>
+        <Box sx={{ minWidth: 200 }}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Select Model</InputLabel>
+            <Select
+              value={selectedModel?.id || ''}
+              label="Select Model"
+              onChange={(e) => {
+                const modelId = e.target.value;
+                const model = availableModels.find(m => m.id === modelId);
+                setSelectedModel(model);
+              }}
+            >
+              {availableModels.map((model) => (
+                <MenuItem key={model.id} value={model.id}>
+                  <Box>
+                    <Typography variant="body2">{model.name}</Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      {model.specialization}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
@@ -312,7 +416,7 @@ const Chat = () => {
                       <SmartToy sx={{ fontSize: 18, mr: 1 }} />
                     )}
                     <Chip
-                      label={message.isUser ? 'You' : 'AI Assistant'}
+                      label={message.isUser ? 'You' : (message.model_used || 'AI Assistant')}
                       size="small"
                       variant="outlined"
                       sx={{

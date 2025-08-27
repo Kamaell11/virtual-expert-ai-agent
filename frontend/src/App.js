@@ -11,6 +11,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
 import History from './pages/History';
+import Models from './pages/Models';
 import Profile from './pages/Profile';
 import TestAuth from './pages/TestAuth';
 
@@ -77,6 +78,7 @@ function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/chat" element={<Chat />} />
                   <Route path="/history" element={<History />} />
+                  <Route path="/models" element={<Models />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/login" element={<Navigate to="/" replace />} />
                   <Route path="/register" element={<Navigate to="/" replace />} />

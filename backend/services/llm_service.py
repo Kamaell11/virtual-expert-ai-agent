@@ -4,15 +4,19 @@ import os
 import asyncio
 from typing import List, Optional, Dict
 from dotenv import load_dotenv
+# from transformers import AutoTokenizer, AutoModelForCausalLM
+# import torch
 
 load_dotenv()
 
 class LLMService:
-    """Service for interacting with Ollama LLM models"""
+    """Service for interacting with Ollama LLM models and fine-tuned models"""
     
     def __init__(self):
         self.base_url = os.getenv("OLLAMA_URL", "http://ollama:11434")
         self.current_model = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
+        self.current_fine_tuned_model = None
+        self.fine_tuned_model_cache = {}
         self.default_parameters = {
             "temperature": 0.7,
             "top_p": 0.9,
@@ -142,13 +146,99 @@ class LLMService:
         except Exception as e:
             return f"Error in chat completion: {str(e)}"
     
+    async def switch_to_fine_tuned_model(self, model_path: str, specialization: str = None) -> bool:
+        """Switch to a fine-tuned model"""
+        try:
+            if model_path in self.fine_tuned_model_cache:
+                self.current_fine_tuned_model = self.fine_tuned_model_cache[model_path]
+                return True
+            
+            # For now, we'll simulate loading fine-tuned models
+            # In production, you would load the actual fine-tuned model
+            self.current_fine_tuned_model = {
+                "path": model_path,
+                "specialization": specialization,
+                "loaded": True
+            }
+            self.fine_tuned_model_cache[model_path] = self.current_fine_tuned_model
+            return True
+        except Exception as e:
+            print(f"Error switching to fine-tuned model: {e}")
+            return False
+    
+    async def switch_to_base_model(self) -> bool:
+        """Switch back to base Ollama model"""
+        self.current_fine_tuned_model = None
+        return True
+    
+    async def generate_with_fine_tuned_model(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        parameters: Optional[Dict] = None
+    ) -> str:
+        """Generate response using fine-tuned model (simulation for now)"""
+        if not self.current_fine_tuned_model:
+            return await self.generate_response(prompt, system_prompt, parameters)
+        
+        # Enhance the system prompt with specialization context
+        specialization = self.current_fine_tuned_model.get("specialization", "")
+        
+        if specialization == "medical":
+            enhanced_system_prompt = """You are a medical expert AI assistant with specialized training in healthcare, medicine, and medical procedures. You have extensive knowledge about:
+- Medical diagnoses and treatments
+- Symptoms and conditions  
+- Medications and their effects
+- Medical procedures and best practices
+- Healthcare guidelines and protocols
+
+Always provide accurate, evidence-based medical information while emphasizing that users should consult healthcare professionals for personal medical advice."""
+        
+        elif specialization == "legal":
+            enhanced_system_prompt = """You are a legal expert AI assistant with specialized training in law, legal procedures, and legal systems. You have extensive knowledge about:
+- Legal principles and concepts
+- Court procedures and processes
+- Contract law and regulations
+- Civil and criminal law
+- Legal rights and responsibilities
+
+Always provide accurate legal information while emphasizing that users should consult qualified attorneys for specific legal advice."""
+        
+        elif specialization == "mechanic":
+            enhanced_system_prompt = """You are an automotive expert AI assistant with specialized training in vehicle mechanics, repair, and maintenance. You have extensive knowledge about:
+- Engine diagnostics and repair
+- Automotive systems and components
+- Maintenance schedules and procedures
+- Troubleshooting vehicle problems
+- Tool usage and safety practices
+
+Provide detailed, practical automotive advice based on industry best practices."""
+        
+        else:
+            enhanced_system_prompt = system_prompt or "You are a helpful AI assistant with specialized domain knowledge."
+        
+        # Use the enhanced system prompt with base model
+        return await self.generate_response(
+            prompt, 
+            enhanced_system_prompt, 
+            parameters
+        )
+
     async def create_agent_response(
         self,
         query: str,
         agent_config: Optional[Dict] = None,
-        web_search_service=None
+        web_search_service=None,
+        fine_tuned_model_info: Optional[Dict] = None
     ) -> str:
         """Generate response with AI agent capabilities and tools"""
+        
+        # Check if we should use fine-tuned model
+        if fine_tuned_model_info:
+            await self.switch_to_fine_tuned_model(
+                fine_tuned_model_info.get("model_path", ""),
+                fine_tuned_model_info.get("specialization", "")
+            )
         
         # Natural conversational AI system prompt
         agent_system_prompt = """You are a helpful, conversational AI assistant with web search capabilities. Respond naturally to questions and have normal conversations with users.
@@ -232,16 +322,25 @@ SPECIAL INSTRUCTION: The user is asking for file generation. After your normal r
                 # General search results
                 enhanced_query += f"\n\nWEB SEARCH RESULTS: {json.dumps(search_results, indent=2)}\nUse this information to provide an accurate answer."
         
-        return await self.generate_response(
-            prompt=enhanced_query,
-            system_prompt=system_prompt,
-            parameters=parameters
-        )
+        # Use fine-tuned model if available, otherwise use base model
+        if self.current_fine_tuned_model:
+            return await self.generate_with_fine_tuned_model(
+                prompt=enhanced_query,
+                system_prompt=system_prompt,
+                parameters=parameters
+            )
+        else:
+            return await self.generate_response(
+                prompt=enhanced_query,
+                system_prompt=system_prompt,
+                parameters=parameters
+            )
     
     def get_model_info(self) -> Dict:
         """Get current model information"""
         return {
             "current_model": self.current_model,
+            "current_fine_tuned_model": self.current_fine_tuned_model,
             "base_url": self.base_url,
             "default_parameters": self.default_parameters
         }

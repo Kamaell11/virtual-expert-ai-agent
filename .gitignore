@@ -157,3 +157,6 @@ ENV/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Data files
+backend/datasets
